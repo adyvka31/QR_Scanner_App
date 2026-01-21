@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:qr_scanner_app/models/ticket.dart';
 import 'package:qr_scanner_app/services/api_service.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
+import 'package:qr_scanner_app/views/add_guest_screen.dart';
 
 class HomePage extends StatefulWidget {
   @override
@@ -110,14 +111,13 @@ class _HomePageState extends State<HomePage> {
 
   @override
   Widget build(BuildContext context) {
-    final Color themeColor = Color(0xff3F9AAE);
-    final Color borderColor = Color(0xff3F9AAE);
+    final Color themeColor = Color(0xff9E3B3B);
     return DefaultTabController(
       length: 2,
       child: Scaffold(
-        appBar: AppBar(
+        appBar: AppBar( 
           title: Container(
-            padding: EdgeInsets.symmetric(vertical: 13),
+            padding: EdgeInsets.symmetric(vertical: 13, horizontal: 20),
             width: double.infinity,
             alignment: Alignment.center,
             decoration: BoxDecoration(
@@ -127,16 +127,49 @@ class _HomePageState extends State<HomePage> {
                 topRight: Radius.circular(10),
               ), // Membuat sudut melengkung
               border: Border.all(
-                color: Color(0xff3F9AAE), // Warna Garis Tepi (Border)
+                color: Color(0xff9E3B3B), // Warna Garis Tepi (Border)
                 width: 0.2, // Ketebalan Garis
               ),
             ),
-            child: Text(
-              'QR Scanner',
-              style: TextStyle(
-                color: Colors.black, // Pastikan warna teks kontras
-                fontWeight: FontWeight.bold,
-              ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'QR Scanner',
+                  textAlign: TextAlign.left,
+                  style: TextStyle(
+                    color: Colors.black, // Pastikan warna teks kontras
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                InkWell(
+                  onTap: () {
+                    Navigator.push(
+                      context,
+
+                      MaterialPageRoute(builder: (_) => AddGuestScreen()),
+                    );
+                  },
+                  child: Row(
+                    children: [
+                      Icon(
+                        Icons.person_add,
+                        color: Color(0xff9E3B3B),
+                        size: 20,
+                      ),
+                      SizedBox(width: 6), // Jarak ikon dan teks
+                      Text(
+                        "Add Guest",
+                        style: TextStyle(
+                          color: Color(0xff9E3B3B),
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             ),
           ),
         ),
@@ -150,7 +183,7 @@ class _HomePageState extends State<HomePage> {
               bottomLeft: Radius.circular(10),
               bottomRight: Radius.circular(10),
             ),
-            border: Border.all(color: borderColor, width: 0.2),
+            border: Border.all(color: themeColor, width: 0.2),
           ),
           child: Column(
             children: [
@@ -159,7 +192,7 @@ class _HomePageState extends State<HomePage> {
                 decoration: BoxDecoration(
                   // Opsional: Memberi garis batas bawah antara Tab dan Isi
                   border: Border(
-                    bottom: BorderSide(color: borderColor, width: 0.2),
+                    bottom: BorderSide(color: themeColor, width: 0.2),
                   ),
                 ),
                 child: TabBar(
@@ -209,7 +242,7 @@ class _HomePageState extends State<HomePage> {
                                             8,
                                           ),
                                           border: Border.all(
-                                            color: Color(0xff3F9AAE),
+                                            color: Color(0xff9E3B3B),
                                             width: 0.2,
                                           ),
                                         ),
