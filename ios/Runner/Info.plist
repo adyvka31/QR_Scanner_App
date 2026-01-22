@@ -4,6 +4,8 @@
 <dict>
 	<key>NSCameraUsageDescription</key>
 	<string>Aplikasi membutuhkan kamera untuk scan QR Code tiket.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+<string>Aplikasi membutuhkan akses galeri untuk scan QR Code dari gambar.</string>
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleDisplayName</key>

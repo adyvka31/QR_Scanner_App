@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:qr_flutter/qr_flutter.dart';
 import 'package:qr_scanner_app/services/api_service.dart';
 
 class AddGuestScreen extends StatefulWidget {
@@ -17,6 +18,7 @@ class _AddGuestScreenState extends State<AddGuestScreen> {
   final TextEditingController _phoneController = TextEditingController();
 
   bool _isLoading = false;
+  String? _generatedQrData;
 
   // Fungsi saat tombol Save ditekan
   Future<void> _submitGuest() async {
@@ -27,33 +29,36 @@ class _AddGuestScreenState extends State<AddGuestScreen> {
 
     setState(() => _isLoading = true);
 
+    // Sembunyikan keyboard agar layar lebih lega untuk lihat QR
+    FocusScope.of(context).unfocus();
+
     try {
       await ApiService().addTicket(_nameController.text);
 
       // Simulasi delay request server
       await Future.delayed(Duration(seconds: 2));
 
-      if (!mounted) return;
+      final String uniqueId = "TIKET-${DateTime.now().millisecondsSinceEpoch}";
 
-      // Tampilkan notifikasi sukses
+      setState(() {
+        _generatedQrData = uniqueId; // Simpan data untuk QR
+        _isLoading = false;
+      });
+
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Guest berhasil ditambahkan!'),
+          content: Text('QR Code berhasil digenerate!'),
           backgroundColor: Colors.green,
         ),
       );
-
-      // Kembali ke halaman sebelumnya dan kirim sinyal 'true' agar home refresh
-      Navigator.pop(context, true);
     } catch (e) {
+      setState(() => _isLoading = false);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Gagal menambahkan: $e'),
+          content: Text('Gagal generate: $e'),
           backgroundColor: Colors.red,
         ),
       );
-    } finally {
-      if (mounted) setState(() => _isLoading = false);
     }
   }
 
@@ -67,7 +72,13 @@ class _AddGuestScreenState extends State<AddGuestScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final bool isDark = Theme.of(context).brightness == Brightness.dark;
     final Color themeColor = Color(0xff9E3B3B);
+
+    final Color containerColor = isDark ? Color(0xFF1E1E1E) : Colors.white70;
+
+    final Color textColor = isDark ? Colors.white : Colors.black;
+    final Color borderColor = isDark ? themeColor.withOpacity(0.5) : themeColor;
 
     final inputDecoration = InputDecoration(
       filled: true,
@@ -99,13 +110,13 @@ class _AddGuestScreenState extends State<AddGuestScreen> {
           width: double.infinity,
           alignment: Alignment.center,
           decoration: BoxDecoration(
-            color: Colors.white70, // Warna Background
+            color: containerColor, // Warna Background
             borderRadius: BorderRadius.only(
               topLeft: Radius.circular(10),
               topRight: Radius.circular(10),
             ), // Membuat sudut melengkung
             border: Border.all(
-              color: Color(0xff9E3B3B), // Warna Garis Tepi (Border)
+              color: borderColor, // Warna Garis Tepi (Border)
               width: 0.2, // Ketebalan Garis
             ),
           ),
@@ -119,7 +130,7 @@ class _AddGuestScreenState extends State<AddGuestScreen> {
                   padding: EdgeInsets.zero,
                   icon: Icon(
                     Icons.arrow_back_ios_new, // Icon panah yang lebih modern
-                    color: Colors.black,
+                    color: textColor,
                     size: 20,
                   ),
                   onPressed: () {
@@ -134,7 +145,7 @@ class _AddGuestScreenState extends State<AddGuestScreen> {
                   "Create New Guest",
                   style: TextStyle(
                     fontWeight: FontWeight.bold,
-                    color: Colors.black,
+                    color: textColor,
                   ),
                 ),
               ),
@@ -147,12 +158,12 @@ class _AddGuestScreenState extends State<AddGuestScreen> {
         width: double.infinity,
         height: double.infinity, // Agar container mengisi layar ke bawah
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: containerColor,
           borderRadius: BorderRadius.only(
             bottomLeft: Radius.circular(10),
             bottomRight: Radius.circular(10),
           ),
-          border: Border.all(color: themeColor, width: 0.2),
+          border: Border.all(color: borderColor, width: 0.2),
         ),
         child: SingleChildScrollView(
           padding: EdgeInsets.all(20),
@@ -166,7 +177,7 @@ class _AddGuestScreenState extends State<AddGuestScreen> {
                   "Full Name",
                   style: TextStyle(
                     fontWeight: FontWeight.bold,
-                    color: Colors.black54,
+                    color: textColor,
                   ),
                 ),
                 SizedBox(height: 8),
@@ -188,7 +199,7 @@ class _AddGuestScreenState extends State<AddGuestScreen> {
                   "Email Address",
                   style: TextStyle(
                     fontWeight: FontWeight.bold,
-                    color: Colors.black54,
+                    color: textColor,
                   ),
                 ),
                 SizedBox(height: 8),
@@ -212,7 +223,7 @@ class _AddGuestScreenState extends State<AddGuestScreen> {
                   "Phone Number",
                   style: TextStyle(
                     fontWeight: FontWeight.bold,
-                    color: Colors.black54,
+                    color: textColor,
                   ),
                 ),
                 SizedBox(height: 8),
@@ -223,7 +234,7 @@ class _AddGuestScreenState extends State<AddGuestScreen> {
                     hintText: "Ex: 08123456789",
                   ),
                 ),
-                SizedBox(height: 40),
+                SizedBox(height: 30),
 
                 // TOMBOL SAVE
                 SizedBox(
@@ -249,6 +260,44 @@ class _AddGuestScreenState extends State<AddGuestScreen> {
                           ),
                   ),
                 ),
+                SizedBox(height: 30),
+                // === AREA HASIL QR CODE ===
+                if (_generatedQrData != null)
+                  Center(
+                    child: Column(
+                      children: [
+                        Container(
+                          padding: EdgeInsets.all(10),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            border: Border.all(
+                              color: Color(0xff9E3B3B),
+                              width: 0.3,
+                            ),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: QrImageView(
+                            data:
+                                _generatedQrData!, // Data UUID yang digenerate
+                            version: QrVersions.auto,
+                            size: 270.0,
+                            foregroundColor: Colors.black,
+                          ),
+                        ),
+                        SizedBox(height: 16),
+                        Text(
+                          _generatedQrData!,
+                          style: TextStyle(
+                            color: themeColor,
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            letterSpacing: 1.5,
+                          ),
+                        ),
+                        SizedBox(height: 30), // Ruang kosong tambahan di bawah
+                      ],
+                    ),
+                  ),
               ],
             ),
           ),

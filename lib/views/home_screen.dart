@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:qr_flutter/qr_flutter.dart';
 import 'package:qr_scanner_app/models/ticket.dart';
 import 'package:qr_scanner_app/services/api_service.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:qr_scanner_app/views/add_guest_screen.dart';
+import 'package:qr_scanner_app/main.dart';
+import 'package:image_picker/image_picker.dart';
 
 class HomePage extends StatefulWidget {
   @override
@@ -16,12 +19,23 @@ class _HomePageState extends State<HomePage> {
 
   // Controller untuk scanner agar bisa dipause/resume
   MobileScannerController cameraController = MobileScannerController();
+
+  // Controller untuk input manual
+  final TextEditingController _idController = TextEditingController();
+
   bool _isProcessingScan = false;
 
   @override
   void initState() {
     super.initState();
     _refreshTickets();
+  }
+
+  @override
+  void dispose() {
+    _idController.dispose();
+    cameraController.dispose();
+    super.dispose();
   }
 
   Future<void> _refreshTickets() async {
@@ -55,13 +69,90 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
+  // Fungsi untuk scan dari galeri
+  Future<void> _scanFromGallery() async {
+    final ImagePicker picker = ImagePicker();
+    // Buka galeri
+    final XFile? image = await picker.pickImage(source: ImageSource.gallery);
+
+    if (image == null) return; // User membatalkan pilih gambar
+
+    // Analisa gambar menggunakan MobileScannerController
+    final BarcodeCapture? barcodes = await cameraController.analyzeImage(
+      image.path,
+    );
+
+    if (barcodes != null && barcodes.barcodes.isNotEmpty) {
+      final String? code = barcodes.barcodes.first.rawValue;
+      if (code != null) {
+        _handleScan(code); // Proses hasil scan
+      } else {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text("QR Code tidak terbaca.")));
+      }
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Tidak ditemukan QR Code pada gambar.")),
+      );
+    }
+  }
+
   // Fungsi untuk menangani hasil scan di Tab 2
   Future<void> _handleScan(String code) async {
     if (_isProcessingScan) return; // Mencegah scan berulang-ulang secepat kilat
+    if (code.isEmpty) return;
 
     setState(() => _isProcessingScan = true);
 
-    // Tampilkan Dialog Loading atau Proses API
+    // Cari index tiket berdasarkan ID/Code yang discan
+    final int ticketIndex = _tickets.indexWhere((ticket) => ticket.id == code);
+
+    if (ticketIndex == -1) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            "Gagal: Tiket ID '$code' tidak terdaftar di Guest List!",
+          ),
+          backgroundColor: Colors.red,
+          duration: Duration(seconds: 3),
+        ),
+      );
+      setState(() => _isProcessingScan = false);
+      return; // Stop proses
+    }
+
+    final Ticket targetTicket = _tickets[ticketIndex];
+
+    if (targetTicket.status.toLowerCase() == 'redeemed') {
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: Text("Tiket Sudah Terpakai"),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text("Nama: ${targetTicket.name}"),
+              SizedBox(height: 8),
+              Text(
+                "Tiket ini sudah diredeem sebelumnya.",
+                style: TextStyle(color: Colors.red),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text("Tutup"),
+            ),
+          ],
+        ),
+      );
+      setState(() => _isProcessingScan = false);
+      return; // Stop proses
+    }
+
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -69,25 +160,47 @@ class _HomePageState extends State<HomePage> {
     );
 
     try {
-      // 1. Panggil API Redeem di sini (sesuai diskusi sebelumnya)
-      // await _api.redeemTicket(code);
+      // 3. PANGGIL API REDEEM
+      // Pastikan di api_service.dart ada endpoint untuk update status ke 'redeemed'
 
-      // Simulasi delay API
       await Future.delayed(Duration(seconds: 1));
 
-      Navigator.pop(context); // Tutup loading dialog
+      // 4. UPDATE STATUS LOKAL (Agar UI langsung berubah tanpa refresh internet)
+      // Kita update status tiket di memori aplikasi menjadi 'Redeemed'
+      setState(() {
+        _tickets[ticketIndex] = Ticket(
+          id: targetTicket.id,
+          name: targetTicket.name,
+          status: 'REDEEMED',
+          createdAt: targetTicket.createdAt,
+          redeemedAt: DateTime.now(), // Isi waktu redeem sekarang
+        );
+      });
 
-      // 2. Tampilkan Sukses
+      Navigator.pop(context); // Tutup loading dialog
+      _idController.clear(); // Bersihkan input manual
+
+      // 5. TAMPILKAN SUKSES
       showDialog(
         context: context,
         builder: (context) => AlertDialog(
+          icon: Icon(Icons.check_circle, color: Colors.green, size: 50),
           title: Text("Berhasil Redeem!"),
-          content: Text("Kode Tiket: $code"),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                "Tamu: ${targetTicket.name}",
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+              SizedBox(height: 5),
+              Text("Tiket berhasil divalidasi."),
+            ],
+          ),
           actions: [
             TextButton(
               onPressed: () {
                 Navigator.pop(context);
-                _refreshTickets(); // Refresh list tamu
               },
               child: Text("OK"),
             ),
@@ -103,42 +216,139 @@ class _HomePageState extends State<HomePage> {
         ),
       );
     } finally {
-      // Beri jeda sedikit sebelum bisa scan lagi
+      // Beri jeda sedikit agar tidak double scan
       await Future.delayed(Duration(seconds: 2));
       setState(() => _isProcessingScan = false);
     }
   }
 
+  // Fungsi untuk menampilkan QR Code dalam Dialog
+  void _showQrDialog(Ticket ticket) {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          backgroundColor: Colors.white,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(15),
+          ),
+          contentPadding: EdgeInsets.all(20),
+          content: SizedBox(
+            width: 270, // Example size
+            height: 300,
+            child: Stack(
+              children: [
+                Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      "Ticket QR Code",
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 18,
+                      ),
+                    ),
+                    SizedBox(height: 10),
+                    // Menampilkan Gambar QR
+                    Container(
+                      padding: EdgeInsets.all(5),
+                      decoration: BoxDecoration(
+                        border: Border.all(
+                          color: Color(0xff9E3B3B),
+                          width: 0.3,
+                        ),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: QrImageView(
+                        data: ticket.id,
+                        version: QrVersions.auto,
+                        size: 190,
+                      ),
+                    ),
+                    SizedBox(height: 15),
+                    Text(
+                      ticket.name,
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    SizedBox(height: 5),
+                    Text(
+                      ticket.id,
+                      style: TextStyle(
+                        color: Colors.grey.shade500,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ],
+                ),
+                Positioned(
+                  top: -16, // Jarak dari atas
+                  right: -16, // Jarak dari kanan
+                  child: IconButton(
+                    icon: Icon(Icons.close, color: Color(0xff9E3B3B)),
+                    splashRadius: 20, // Agar efek kliknya kecil rapi
+                    onPressed: () => Navigator.pop(context),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    final bool isDark = Theme.of(context).brightness == Brightness.dark;
     final Color themeColor = Color(0xff9E3B3B);
+
+    final Color containerColor = isDark ? Color(0xFF1E1E1E) : Colors.white70;
+
+    final Color textColor = isDark ? Colors.white : Colors.black;
+    final Color borderColor = isDark ? themeColor.withOpacity(0.5) : themeColor;
+
     return DefaultTabController(
       length: 2,
       child: Scaffold(
-        appBar: AppBar( 
+        resizeToAvoidBottomInset: false,
+        appBar: AppBar(
           title: Container(
             padding: EdgeInsets.symmetric(vertical: 13, horizontal: 20),
             width: double.infinity,
             alignment: Alignment.center,
             decoration: BoxDecoration(
-              color: Colors.white70, // Warna Background
+              color: containerColor, // Warna Background
               borderRadius: BorderRadius.only(
                 topLeft: Radius.circular(10),
                 topRight: Radius.circular(10),
               ), // Membuat sudut melengkung
               border: Border.all(
-                color: Color(0xff9E3B3B), // Warna Garis Tepi (Border)
+                color: borderColor, // Warna Garis Tepi (Border)
                 width: 0.2, // Ketebalan Garis
               ),
             ),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
+                InkWell(
+                  onTap: () {
+                    themeNotifier.value = isDark
+                        ? ThemeMode.light
+                        : ThemeMode.dark;
+                  },
+                  child: Icon(
+                    isDark ? Icons.light_mode : Icons.dark_mode,
+                    color: themeColor,
+                  ),
+                ),
                 Text(
                   'QR Scanner',
                   textAlign: TextAlign.left,
                   style: TextStyle(
-                    color: Colors.black, // Pastikan warna teks kontras
+                    color: textColor, // Pastikan warna teks kontras
                     fontWeight: FontWeight.bold,
                   ),
                 ),
@@ -150,24 +360,7 @@ class _HomePageState extends State<HomePage> {
                       MaterialPageRoute(builder: (_) => AddGuestScreen()),
                     );
                   },
-                  child: Row(
-                    children: [
-                      Icon(
-                        Icons.person_add,
-                        color: Color(0xff9E3B3B),
-                        size: 20,
-                      ),
-                      SizedBox(width: 6), // Jarak ikon dan teks
-                      Text(
-                        "Add Guest",
-                        style: TextStyle(
-                          color: Color(0xff9E3B3B),
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ],
-                  ),
+                  child: Icon(Icons.person_add, color: Color(0xff9E3B3B)),
                 ),
               ],
             ),
@@ -178,12 +371,12 @@ class _HomePageState extends State<HomePage> {
           margin: EdgeInsets.all(16),
           width: double.infinity,
           decoration: BoxDecoration(
-            color: Colors.white70,
+            color: containerColor,
             borderRadius: BorderRadius.only(
               bottomLeft: Radius.circular(10),
               bottomRight: Radius.circular(10),
             ),
-            border: Border.all(color: themeColor, width: 0.2),
+            border: Border.all(color: borderColor, width: 0.2),
           ),
           child: Column(
             children: [
@@ -223,14 +416,16 @@ class _HomePageState extends State<HomePage> {
                             onRefresh: _refreshTickets,
                             child: _tickets.isEmpty
                                 ? Center(
-                                    child: Text("Belum ada tiket yang discan"),
+                                    child: Text(
+                                      "Belum ada guest yang terdaftar.",
+                                    ),
                                   )
                                 : ListView.builder(
                                     padding: EdgeInsets.only(
                                       top: 20,
                                       left: 20,
                                       right: 20,
-                                    ), // Padding dalam list
+                                    ),
                                     itemCount: _tickets.length,
                                     itemBuilder: (context, index) {
                                       final ticket = _tickets[index];
@@ -247,6 +442,9 @@ class _HomePageState extends State<HomePage> {
                                           ),
                                         ),
                                         child: ListTile(
+                                          onTap: () {
+                                            _showQrDialog(ticket);
+                                          },
                                           title: Text(ticket.name),
                                           subtitle: Text(ticket.status),
                                           trailing: IconButton(
@@ -270,27 +468,110 @@ class _HomePageState extends State<HomePage> {
                         bottomLeft: Radius.circular(10),
                         bottomRight: Radius.circular(10),
                       ),
-                      child: Stack(
+                      child: Column(
                         children: [
-                          MobileScanner(
-                            controller: cameraController,
-                            onDetect: (capture) {
-                              final List<Barcode> barcodes = capture.barcodes;
-                              for (final barcode in barcodes) {
-                                if (barcode.rawValue != null) {
-                                  _handleScan(barcode.rawValue!);
-                                }
-                              }
-                            },
+                          Expanded(
+                            child: Stack(
+                              children: [
+                                MobileScanner(
+                                  controller: cameraController,
+                                  onDetect: (capture) {
+                                    final List<Barcode> barcodes =
+                                        capture.barcodes;
+                                    for (final barcode in barcodes) {
+                                      if (barcode.rawValue != null) {
+                                        _handleScan(barcode.rawValue!);
+                                      }
+                                    }
+                                  },
+                                ),
+                                Center(
+                                  child: Container(
+                                    width: 200,
+                                    height: 200,
+                                    decoration: BoxDecoration(
+                                      border: Border.all(
+                                        color: themeColor,
+                                        width: 3,
+                                      ),
+                                      borderRadius: BorderRadius.circular(20),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
-                          Center(
-                            child: Container(
-                              width: 200,
-                              height: 200,
-                              decoration: BoxDecoration(
-                                border: Border.all(color: themeColor, width: 3),
-                                borderRadius: BorderRadius.circular(20),
+
+                          Container(
+                            padding: EdgeInsets.all(16),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              border: Border(
+                                top: BorderSide(color: themeColor, width: 0.2),
                               ),
+                            ),
+                            child: Row(
+                              children: [
+                                InkWell(
+                                  onTap: _scanFromGallery,
+                                  child: Container(
+                                    padding: EdgeInsets.all(12),
+                                    decoration: BoxDecoration(
+                                      color: Colors.grey[100],
+                                      borderRadius: BorderRadius.circular(8),
+                                      border: Border.all(
+                                        color: Colors.grey.shade300,
+                                      ),
+                                    ),
+                                    child: Icon(Icons.image, color: themeColor),
+                                  ),
+                                ),
+                                SizedBox(width: 10),
+                                Expanded(
+                                  child: TextField(
+                                    controller: _idController,
+                                    decoration: InputDecoration(
+                                      hintText: "Input Ticket ID Manual...",
+                                      hintStyle: TextStyle(
+                                        fontSize: 14,
+                                        color: Colors.grey,
+                                      ),
+                                      contentPadding: EdgeInsets.symmetric(
+                                        horizontal: 16,
+                                        vertical: 12,
+                                      ),
+                                      border: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(8),
+                                        borderSide: BorderSide(
+                                          color: Colors.grey.shade300,
+                                        ),
+                                      ),
+                                      focusedBorder: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(8),
+                                        borderSide: BorderSide(
+                                          color: themeColor,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                                SizedBox(width: 10),
+                                ElevatedButton(
+                                  onPressed: () =>
+                                      _handleScan(_idController.text),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: themeColor,
+                                    padding: EdgeInsets.symmetric(
+                                      horizontal: 20,
+                                      vertical: 14,
+                                    ),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                  ),
+                                  child: Icon(Icons.send, color: Colors.white),
+                                ),
+                              ],
                             ),
                           ),
                         ],
