@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:qr_scanner_app/views/home_screen.dart';
+import 'package:qr_scanner_app/auth/login_screen.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -23,7 +23,7 @@ class _SplashScreenState extends State<SplashScreen> {
     if (mounted) {
       Navigator.pushAndRemoveUntil(
         context,
-        MaterialPageRoute(builder: (context) => HomePage()),
+        MaterialPageRoute(builder: (context) => LoginScreen()),
         (route) => false,
       );
     }

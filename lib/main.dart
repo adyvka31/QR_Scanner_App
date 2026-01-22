@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
-import 'package:qr_scanner_app/views/home_screen.dart';
 import 'package:qr_scanner_app/views/splash_screen.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'firebase_options.dart';
 
 final ValueNotifier<ThemeMode> themeNotifier = ValueNotifier(ThemeMode.light);
 
-void main() {
+void main() async {
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
   runApp(const MyApp());
 }
 

@@ -39,6 +39,7 @@ dependencies:
   intl: ^0.20.2 # For date formatting
   qr_flutter: ^4.1.0 # For generating QR codes
   image_picker: ^1.2.1 # For picking images from gallery or camera
+  firebase_core: ^4.4.0
 
 dev_dependencies:
   flutter_test:
