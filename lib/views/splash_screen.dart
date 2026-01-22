@@ -37,7 +37,7 @@ class _SplashScreenState extends State<SplashScreen> {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(Icons.qr_code, size: 100, color: Color(0xff9E3B3B)),
-            SizedBox(height: 5),
+            SizedBox(height: 4),
             Text(
               "QR SCANNER APP",
               style: TextStyle(

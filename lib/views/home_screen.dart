@@ -520,7 +520,8 @@ class _HomePageState extends State<HomePage> {
                                       color: Colors.grey[100],
                                       borderRadius: BorderRadius.circular(8),
                                       border: Border.all(
-                                        color: Colors.grey.shade300,
+                                        color: themeColor,
+                                        width: 0.3,
                                       ),
                                     ),
                                     child: Icon(Icons.image, color: themeColor),
