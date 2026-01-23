@@ -505,7 +505,7 @@ class _HomePageState extends State<HomePage> {
                           Container(
                             padding: EdgeInsets.all(16),
                             decoration: BoxDecoration(
-                              color: Colors.white,
+                              color: containerColor,
                               border: Border(
                                 top: BorderSide(color: themeColor, width: 0.2),
                               ),
