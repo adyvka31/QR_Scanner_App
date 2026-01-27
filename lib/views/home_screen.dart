@@ -15,6 +15,7 @@ class HomePage extends StatefulWidget {
 class _HomePageState extends State<HomePage> {
   final _api = ApiService();
   List<Ticket> _tickets = [];
+  List<Ticket> _filteredTickets = [];
   bool _isLoading = true;
 
   // Controller untuk scanner agar bisa dipause/resume
@@ -22,6 +23,9 @@ class _HomePageState extends State<HomePage> {
 
   // Controller untuk input manual
   final TextEditingController _idController = TextEditingController();
+
+  // Controller untuk pencarian
+  final TextEditingController _searchController = TextEditingController();
 
   bool _isProcessingScan = false;
 
@@ -34,6 +38,7 @@ class _HomePageState extends State<HomePage> {
   @override
   void dispose() {
     _idController.dispose();
+    _searchController.dispose();
     cameraController.dispose();
     super.dispose();
   }
@@ -42,7 +47,10 @@ class _HomePageState extends State<HomePage> {
     if (_tickets.isEmpty) setState(() => _isLoading = true);
     try {
       final data = await _api.getTickets();
-      setState(() => _tickets = data);
+      setState(() {
+        _tickets = data;
+        _runFilter(_searchController.text);
+      });
     } catch (e) {
       ScaffoldMessenger.of(
         context,
@@ -58,6 +66,7 @@ class _HomePageState extends State<HomePage> {
       // await _api.deleteTicket(id); // Uncomment jika API sudah siap
       setState(() {
         _tickets.removeWhere((ticket) => ticket.id == id);
+        _filteredTickets.removeWhere((ticket) => ticket.id == id);
       });
       ScaffoldMessenger.of(
         context,
@@ -300,6 +309,28 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
+  // Fungsi Logika Pencarian
+  void _runFilter(String keyword) {
+    List<Ticket> results = [];
+    if (keyword.isEmpty) {
+      // Jika kosong, tampilkan semua data asli
+      results = _tickets;
+    } else {
+      // Filter berdasarkan Nama (Case Insensitive) ATAU ID
+      results = _tickets
+          .where(
+            (ticket) =>
+                ticket.name.toLowerCase().contains(keyword.toLowerCase()) ||
+                ticket.id.toLowerCase().contains(keyword.toLowerCase()),
+          )
+          .toList();
+    }
+
+    setState(() {
+      _filteredTickets = results;
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     final bool isDark = Theme.of(context).brightness == Brightness.dark;
@@ -309,6 +340,27 @@ class _HomePageState extends State<HomePage> {
 
     final Color textColor = isDark ? Colors.white : Colors.black;
     final Color borderColor = isDark ? themeColor.withOpacity(0.5) : themeColor;
+
+    final searchInputDecoration = InputDecoration(
+      hintText: "Search a Guest...",
+      hintStyle: TextStyle(fontSize: 14, color: Colors.grey),
+      prefixIcon: Icon(Icons.search, color: Colors.grey),
+      contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      filled: true,
+      fillColor: isDark ? Colors.black26 : Colors.white,
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(8),
+        borderSide: BorderSide(color: Colors.grey.shade300),
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(8),
+        borderSide: BorderSide(color: borderColor, width: 0.5),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(8),
+        borderSide: BorderSide(color: themeColor),
+      ),
+    );
 
     return DefaultTabController(
       length: 2,
@@ -410,56 +462,73 @@ class _HomePageState extends State<HomePage> {
                 child: TabBarView(
                   children: [
                     // === TAB 1: Guest List ===
-                    _isLoading
-                        ? Center(child: CircularProgressIndicator())
-                        : RefreshIndicator(
-                            onRefresh: _refreshTickets,
-                            child: _tickets.isEmpty
-                                ? Center(
-                                    child: Text(
-                                      "Belum ada guest yang terdaftar.",
-                                    ),
-                                  )
-                                : ListView.builder(
-                                    padding: EdgeInsets.only(
-                                      top: 20,
-                                      left: 20,
-                                      right: 20,
-                                    ),
-                                    itemCount: _tickets.length,
-                                    itemBuilder: (context, index) {
-                                      final ticket = _tickets[index];
-                                      return Container(
-                                        margin: EdgeInsets.only(bottom: 12),
-                                        decoration: BoxDecoration(
-                                          color: Colors.white,
-                                          borderRadius: BorderRadius.circular(
-                                            8,
-                                          ),
-                                          border: Border.all(
-                                            color: Color(0xff9E3B3B),
-                                            width: 0.2,
-                                          ),
-                                        ),
-                                        child: ListTile(
-                                          onTap: () {
-                                            _showQrDialog(ticket);
-                                          },
-                                          title: Text(ticket.name),
-                                          subtitle: Text(ticket.status),
-                                          trailing: IconButton(
-                                            icon: Icon(
-                                              Icons.delete,
-                                              color: Colors.red,
-                                            ),
-                                            onPressed: () =>
-                                                _deleteTicket(ticket.id),
-                                          ),
-                                        ),
-                                      );
-                                    },
-                                  ),
+                    Column(
+                      children: [
+                        Padding(
+                          padding: const EdgeInsets.all(16.0),
+                          child: TextField(
+                            controller: _searchController,
+                            onChanged: _runFilter,
+                            style: TextStyle(color: textColor),
+                            decoration: searchInputDecoration,
                           ),
+                        ),
+                        Expanded(
+                          child: _isLoading
+                              ? Center(child: CircularProgressIndicator())
+                              : RefreshIndicator(
+                                  onRefresh: _refreshTickets,
+                                  child: _tickets.isEmpty
+                                      ? Center(
+                                          child: Text(
+                                            "Belum ada guest yang terdaftar.",
+                                          ),
+                                        )
+                                      : ListView.builder(
+                                          padding: EdgeInsets.only(
+                                            top: 20,
+                                            left: 20,
+                                            right: 20,
+                                          ),
+                                          itemCount: _filteredTickets.length,
+                                          itemBuilder: (context, index) {
+                                            final ticket =
+                                                _filteredTickets[index];
+                                            return Container(
+                                              margin: EdgeInsets.only(
+                                                bottom: 12,
+                                              ),
+                                              decoration: BoxDecoration(
+                                                color: Colors.white,
+                                                borderRadius:
+                                                    BorderRadius.circular(8),
+                                                border: Border.all(
+                                                  color: Color(0xff9E3B3B),
+                                                  width: 0.2,
+                                                ),
+                                              ),
+                                              child: ListTile(
+                                                onTap: () {
+                                                  _showQrDialog(ticket);
+                                                },
+                                                title: Text(ticket.name),
+                                                subtitle: Text(ticket.status),
+                                                trailing: IconButton(
+                                                  icon: Icon(
+                                                    Icons.delete,
+                                                    color: Colors.red,
+                                                  ),
+                                                  onPressed: () =>
+                                                      _deleteTicket(ticket.id),
+                                                ),
+                                              ),
+                                            );
+                                          },
+                                        ),
+                                ),
+                        ),
+                      ],
+                    ),
 
                     // === TAB 2: Scanner ===
                     // ClipRRect agar kamera tidak menembus sudut melengkung container
