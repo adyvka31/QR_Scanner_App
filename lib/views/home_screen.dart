@@ -13,7 +13,7 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
-  final ApiService _api = ApiService();
+  final _api = ApiService();
   List<Ticket> _tickets = [];
   bool _isLoading = true;
 
@@ -161,7 +161,7 @@ class _HomePageState extends State<HomePage> {
 
     try {
       // 3. PANGGIL API REDEEM
-      // Pastikan di api_service.dart ada endpoint untuk update status ke 'redeemed'
+      _api.scanTicket(targetTicket.id);
 
       await Future.delayed(Duration(seconds: 1));
 
