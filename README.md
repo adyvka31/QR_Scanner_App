@@ -1,16 +1,21 @@
-# qr_scanner_app
+# 📹 QR Scanner & Guest Manager App 📹
 
-A new Flutter project.
+**QR Scanner & Guest Manager** adalah aplikasi mudah alih yang dibina menggunakan **Flutter** untuk memudahkan proses pendaftaran dan pengurusan tetamu melalui imbasan kod QR. Aplikasi ini diintegrasikan dengan **Firebase** untuk memastikan penyimpanan data yang selamat dan masa nyata (*real-time*).
 
-## Getting Started
+## 🚀 Fitur Utama
 
-This project is a starting point for a Flutter application.
+- **Imbasan Kod QR:** Menggunakan kamera peranti untuk mengimbas kod QR tiket atau tetamu secara pantas.
+- **Pengurusan Tetamu:** Menambah maklumat tetamu baru secara manual atau melalui API.
+- **Sistem Autentikasi:** Log masuk dan pendaftaran akaun menggunakan **Firebase Auth**.
+- **Penyimpanan Awan:** Data tetamu dan status tiket disimpan serta dikemaskini secara automatik dalam **Cloud Firestore**.
+- **Skrin Splash:** Antarmuka permulaan yang profesional sebelum masuk ke aplikasi utama.
+- **Antarmuka Moden:** Reka bentuk UI yang bersih dan responsif untuk pengalaman pengguna yang lebih baik.
 
-A few resources to get you started if this is your first Flutter project:
+## 🛠️ Teknologi yang Digunakan
 
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
+- **Framework:** [Flutter](https://flutter.dev/) (Dart)
+- **Backend/Database:** [Firebase](https://firebase.google.com/) (Authentication & Cloud Firestore)
+- **Networking:** [http](https://pub.dev/packages/http) untuk integrasi perkhidmatan API.
+- **QR Engine:** [mobile_scanner](https://pub.dev/packages/mobile_scanner) (atau pakej seumpamanya) untuk fungsi kamera.
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+## 📂 Struktur Projek
