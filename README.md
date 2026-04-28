@@ -19,3 +19,16 @@
 - **QR Engine:** [mobile_scanner](https://pub.dev/packages/mobile_scanner) (atau pakej seumpamanya) untuk fungsi kamera.
 
 ## 📂 Struktur Projek
+File README created at /mnt/data/README_QR_Scanner_App.md
+
+```text
+├── lib/
+│   ├── auth/            # Skrin log masuk dan pendaftaran
+│   ├── models/          # Model data (Ticket/Guest)
+│   ├── services/        # Logika API, Firebase Auth, dan Firestore
+│   ├── views/           # Skrin utama (Home, Splash, Add Guest)
+│   ├── main.dart        # Titik permulaan aplikasi
+│   └── firebase_options.dart # Konfigurasi Firebase
+├── android/             # Konfigurasi platform Android (termasuk google-services.json)
+├── ios/                 # Konfigurasi platform iOS (termasuk GoogleService-Info.plist)
+└── pubspec.yaml         # Fail pengurusan dependensi
